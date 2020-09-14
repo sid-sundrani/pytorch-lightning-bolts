@@ -152,12 +152,13 @@ class BYOL(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.hparams.learning_rate, weight_decay=self.hparams.weight_decay)
         optimizer = LARSWrapper(optimizer)
-        scheduler = LinearWarmupCosineAnnealingLR(
-            optimizer,
-            warmup_epochs=self.hparams.warmup_epochs,
-            max_epochs=self.hparams.max_epochs
-        )
-        return [optimizer], [scheduler]
+        # scheduler = LinearWarmupCosineAnnealingLR(
+        #     optimizer,
+        #     warmup_epochs=self.hparams.warmup_epochs,
+        #     max_epochs=self.hparams.max_epochs
+        # )
+        #return [optimizer], [scheduler]
+        return optimizer
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -238,7 +239,7 @@ def cli_main():
     online_eval = SSLOnlineEvaluator(z_dim=2048, num_classes=dm.num_classes)
     online_eval.to_device = to_device
 
-    trainer = pl.Trainer.from_argparse_args(args, max_steps=300000, callbacks=[online_eval])
+    trainer = pl.Trainer.from_argparse_args(args, callbacks=[online_eval])
 
     trainer.fit(model, dm)
 

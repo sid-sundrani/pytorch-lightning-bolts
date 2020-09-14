@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 import pytorch_lightning as pl
 import torch
@@ -99,7 +100,7 @@ class SSLOnlineEvaluator(pl.Callback):  # pragma: no-cover
 
 class BYOLMAWeightUpdate(pl.Callback):
 
-    def __init__(self, initial_tau=0.996):
+    def __init__(self, initial_tau=0.996, max_steps=300000):
         """
         Weight update rule from BYOL.
 
@@ -131,6 +132,7 @@ class BYOLMAWeightUpdate(pl.Callback):
         super().__init__()
         self.initial_tau = initial_tau
         self.current_tau = initial_tau
+        self.max_steps = max_steps
 
     def on_train_batch_end(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
         # get networks
@@ -144,7 +146,7 @@ class BYOLMAWeightUpdate(pl.Callback):
         self.current_tau = self.update_tau(pl_module, trainer)
 
     def update_tau(self, pl_module, trainer):
-        tau = 1 - (1 - self.initial_tau) * (math.cos(math.pi * pl_module.global_step / trainer.max_steps) + 1) / 2
+        tau = 1 - (1 - self.initial_tau) * (np.cos(np.pi * min(1, pl_module.global_step / self.max_steps)) + 1) / 2
         return tau
 
     def update_weights(self, online_net, target_net):

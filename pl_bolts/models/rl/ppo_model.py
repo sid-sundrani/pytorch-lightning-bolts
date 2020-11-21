@@ -91,7 +91,6 @@ class PPO(pl.LightningModule):
         self.env = gym.make(env)
         # value network 
         self.critic = MLP(self.env.observation_space.shape, 1)
-
         # policy network (agent)
         if type(self.env.action_space) == gym.spaces.box.Box:
             act_dim = self.env.action_space.shape[0]
@@ -188,7 +187,7 @@ class PPO(pl.LightningModule):
             self.batch_states.append(self.state)
             self.batch_actions.append(action)
             self.batch_logp.append(log_prob)
-            
+
             self.ep_rewards.append(reward)
             self.ep_values.append(value.item())
             
@@ -198,7 +197,7 @@ class PPO(pl.LightningModule):
             terminal = len(self.ep_rewards) == self.max_episode_len
 
             if epoch_end or done or terminal:                   
-                # if trajectory abtruptly, boostrap value of next state 
+                # if trajectory ends abtruptly, boostrap value of next state 
                 if (terminal or epoch_end) and not done:
                     with torch.no_grad():
                         last_value = self.critic(self.state).item()
@@ -245,12 +244,12 @@ class PPO(pl.LightningModule):
         loss_actor = -(torch.min(ratio * adv, clip_adv)).mean()
         return loss_actor
     
-    def critic_loss(self, state, action, logp_old, qval, adv):
+    def critic_loss(self, state, action, logp_old, qval, adv) -> torch.Tensor:
         value = self.critic(state)
         loss_critic = (qval - value).pow(2).mean()
         return loss_critic 
     
-    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx, optimizer_idx) -> OrderedDict:
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx, optimizer_idx):
         """
         Carries out a single update to actor and critic network from a batch of replay buffer. 
         

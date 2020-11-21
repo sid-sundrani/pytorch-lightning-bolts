@@ -9,7 +9,6 @@ from pl_bolts.datamodules import ExperienceSourceDataset
 from pl_bolts.datamodules.experience_source import Experience
 from pl_bolts.models.rl.common.agents import PolicyAgentContinous, PolicyAgentCategorical
 from pl_bolts.models.rl.common.networks import MLP
-
 from pl_bolts.utils.warnings import warn_missing_pkg
 
 import torch 
@@ -18,9 +17,6 @@ import torch.optim as optim
 from torch.optim.optimizer import Optimizer
 import numpy as np 
 
-
-
-
 try:
     import gym
 except ModuleNotFoundError:
@@ -28,6 +24,7 @@ except ModuleNotFoundError:
     _GYM_AVAILABLE = False
 else:
     _GYM_AVAILABLE = True
+
 
 class PPO(pl.LightningModule):
     """
@@ -104,7 +101,7 @@ class PPO(pl.LightningModule):
             self.net = MLP(self.env.observation_space.shape, self.env.action_space.n)
             self.agent = PolicyAgentCategorical(self.net)
         else:
-            raise NotImplementedError('Env action space should be either of type Box (continous) or Discrete (categorical). Got type: ', 
+            raise NotImplementedError('Env action space should be of type Box (continous) or Discrete (categorical). Got type: ', 
                                       type(self.env.action_space))
        
         self.batch_states = [] 
@@ -124,7 +121,7 @@ class PPO(pl.LightningModule):
         
         self.state = torch.FloatTensor(self.env.reset())
 
-    def forward(self, x: torch.Tensor) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Passes in a state x through the network and returns the policy and a sampled action
         Args:
@@ -135,7 +132,7 @@ class PPO(pl.LightningModule):
         pi, action = self.agent(x)
         value = self.critic(x)
         return pi, action, value
-        
+
     def discount_rewards(self, rewards: List[float], discount: float) -> List[float]:
         """Calculate the discounted rewards of all rewards in list
         Args:
@@ -154,14 +151,14 @@ class PPO(pl.LightningModule):
 
         return list(reversed(cumul_reward))
     
-    def calc_advantage(self, rewards: List[float], values: List[float], last_value: float):
-        """Calculate the advantage of episode given rewards, state values, and the last value of episode 
+    def calc_advantage(self, rewards: List[float], values: List[float], last_value: float) -> List[float]:
+        """Calculate the advantage given rewards, state values, and the last value of episode 
         Args:
             rewards: list of episode rewards 
             values: list of state values from critic 
             last_value: value of last state of episode 
         Returns:
-            list of discounted rewards/advantages
+            list of advantages
         """
         rews = rewards + [last_value]
         vals = values + [last_value]
@@ -236,8 +233,8 @@ class PPO(pl.LightningModule):
                 self.avg_reward = self.epoch_rewards/self.steps_per_epoch
                 self.avg_ep_len = self.steps_per_epoch/self.done_episodes
                 
-                self.epoch_rewards=0
-                self.done_episodes=0
+                self.epoch_rewards = 0
+                self.done_episodes = 0
                 
         
     def actor_loss(self, state, action, logp_old, qval, adv) -> torch.Tensor:
